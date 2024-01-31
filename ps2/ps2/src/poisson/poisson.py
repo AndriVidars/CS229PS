@@ -72,8 +72,8 @@ class PoissonRegression:
         # use full batch
         for iter in range(self.max_iter):
             grad = sum([y[i]*x[i,:].T - np.exp(np.inner(x[i, :].T, self.theta))*x[i, :].T for i in range(x.shape[0])])
-            theta_old = self.theta
-            self.theta = self.theta + self.step_size*grad
+            theta_old = self.theta.copy()
+            self.theta += self.step_size*grad
             if np.linalg.norm(self.theta - theta_old) < self.eps:
                 return
         
