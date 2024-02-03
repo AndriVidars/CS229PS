@@ -21,6 +21,9 @@ def softmax(x):
         A 2d numpy float array containing the softmax results of shape batch_size x number_of_classes
     """
     # *** START CODE HERE ***
+    exp_x = np.exp(x)
+    exp_sum = np.sum(exp_x, axis=1, keepdims=True)
+    return exp_x / exp_sum
     # *** END CODE HERE ***
 
 def sigmoid(x):
@@ -33,7 +36,10 @@ def sigmoid(x):
     Returns:
         A numpy float array containing the sigmoid results
     """
+    def sig(x):
+        return 1/(1+np.exp(-x))
     # *** START CODE HERE ***
+    return sig(x)
     # *** END CODE HERE ***
 
 def get_initial_params(input_size, num_hidden, num_output):
@@ -63,6 +69,12 @@ def get_initial_params(input_size, num_hidden, num_output):
     """
 
     # *** START CODE HERE ***
+    W1 = np.random.normal(loc=0, scale=1, size=(input_size, num_hidden))
+    W2 = np.random.normal(loc=0, scale=1, size=(num_hidden, num_output))
+    b1 = np.random.normal(loc=0, scale=1, size=(num_hidden))
+    b2 = np.random.normal(loc=0, scale=1, size=(num_output))
+    return {'W1': W1, 'W2': W2, 'b1': b1, 'b2': b2}
+
     # *** END CODE HERE ***
 
 def forward_prop(data, one_hot_labels, params):
@@ -84,6 +96,14 @@ def forward_prop(data, one_hot_labels, params):
             3. The average loss for these data elements
     """
     # *** START CODE HERE ***
+    B = data.shape[0]
+    A = sigmoid(data @ params['W1'] + params['b1'])
+    output = softmax(A @ params['W2'] + params['b2'])
+    log_out = np.log(output)
+    losses = [-log_out[i, :] @ one_hot_labels[i, :].T for i in range(B)]
+    loss_avg = np.avg(losses)
+    return A, output, loss_avg
+    
     # *** END CODE HERE ***
 
 def backward_prop(data, one_hot_labels, params, forward_prop_func):
