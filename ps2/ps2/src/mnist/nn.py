@@ -21,8 +21,9 @@ def softmax(x):
         A 2d numpy float array containing the softmax results of shape batch_size x number_of_classes
     """
     # *** START CODE HERE ***
+    x -= np.max(x, axis=1) # subtract maximum value, row-wise to prevent overflow
     exp_x = np.exp(x)
-    exp_sum = np.sum(exp_x, axis=1, keepdims=True)
+    exp_sum = np.sum(exp_x, axis=1)
     return exp_x / exp_sum
     # *** END CODE HERE ***
 
@@ -36,11 +37,11 @@ def sigmoid(x):
     Returns:
         A numpy float array containing the sigmoid results
     """
-    def sig(x):
-        return 1/(1+np.exp(-x))
     # *** START CODE HERE ***
-    return sig(x)
+    return  1/(1+np.exp(-x))
     # *** END CODE HERE ***
+
+
 
 def get_initial_params(input_size, num_hidden, num_output):
     """
@@ -97,11 +98,13 @@ def forward_prop(data, one_hot_labels, params):
     """
     # *** START CODE HERE ***
     B = data.shape[0]
-    A = sigmoid(data @ params['W1'] + params['b1'])
-    output = softmax(A @ params['W2'] + params['b2'])
+
+    A = sigmoid(data @ params['W1']  + params['b1'])
+    output = softmax(A @ params['W2']  + params['b2'])
+    
     log_out = np.log(output)
     losses = [-log_out[i, :] @ one_hot_labels[i, :].T for i in range(B)]
-    loss_avg = np.avg(losses)
+    loss_avg = np.mean(losses)
     return A, output, loss_avg
     
     # *** END CODE HERE ***
@@ -127,6 +130,20 @@ def backward_prop(data, one_hot_labels, params, forward_prop_func):
             W1, W2, b1, and b2
     """
     # *** START CODE HERE ***
+    A, output, _ = forward_prop_func(data, one_hot_labels, params)
+
+    output_grad = output - one_hot_labels # softmax gradient, from derivation in part 1
+    
+    b2_grad = np.sum(output_grad, axis=0)
+    W2_grad = A.T @ output_grad
+    
+    A_grad = A * (1-A) # element wise multiplication, sigmoid derivative
+    hidden_grad = output_grad @ params['W2'].T * A_grad
+
+    b1_grad = np.sum(hidden_grad, axis=0)
+    W1_grad = data.T @ hidden_grad
+
+    return {'W1': W1_grad, 'W2': W2_grad, 'b1': b1_grad, 'b2': b2_grad}
     # *** END CODE HERE ***
 
 
@@ -174,6 +191,15 @@ def gradient_descent_epoch(train_data, one_hot_train_labels, learning_rate, batc
     """
 
     # *** START CODE HERE ***
+    for i in range(0, train_data.shape[0], batch_size):
+        # TODO: use random batches
+
+        data = train_data[i:i+batch_size, :]
+        one_hot_labels = one_hot_train_labels[i:i+batch_size]
+        grads = backward_prop_func(data, one_hot_labels, params, forward_prop_func)
+        for p in params.keys():
+            params[p] -= (1/batch_size)*learning_rate*grads[p]
+
     # *** END CODE HERE ***
 
     # This function does not return anything
@@ -303,9 +329,13 @@ def main(plot=True):
     }
     
     baseline_acc = run_train_test('baseline', all_data, all_labels, backward_prop, args.num_epochs, plot)
+    
+    reg_acc = None
+    """
     reg_acc = run_train_test('regularized', all_data, all_labels, 
         lambda a, b, c, d: backward_prop_regularized(a, b, c, d, reg=0.0001),
         args.num_epochs, plot)
+    """
         
     return baseline_acc, reg_acc
 
