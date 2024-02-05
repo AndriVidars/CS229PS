@@ -131,21 +131,20 @@ def backward_prop(data, one_hot_labels, params, forward_prop_func):
             W1, W2, b1, and b2
     """
     # *** START CODE HERE ***
+    # implement algorithm on page 100 in lecture notes
     B = data.shape[0]
     A, output, _ = forward_prop_func(data, one_hot_labels, params)
 
-    output_grad = output - one_hot_labels # softmax gradient, from derivation in part 1
-    
-    b2_grad = (1/B) * np.sum(output_grad, axis=0)
-    W2_grad = (1/B) * A.T @ output_grad
-    
-    A_grad = A * (1-A) # element wise multiplication, sigmoid derivative
-    hidden_grad = output_grad @ params['W2'].T * A_grad
+    delta_2 = output - one_hot_labels # softmax gradient, from derivation in part 1
+    b2_grad = (1/B) * np.sum(delta_2, axis=0)
+    W2_grad = (1/B) * A.T @ delta_2
 
-    b1_grad = (1/B) * np.sum(hidden_grad, axis=0)
-    W1_grad = (1/B) * data.T @ hidden_grad
+    A_grad = A_grad = A * (1-A) # element wise multiplication, sigmoid derivative
+    delta_1 = (delta_2 @ params['W2'].T) * A_grad
+    
+    b1_grad = (1/B) * np.sum(delta_1, axis=0)
+    W1_grad = (1/B) * data.T @ delta_1
 
-    # maybe have division by B here rather than in learning phase
     return {'W1': W1_grad, 'W2': W2_grad, 'b1': b1_grad, 'b2': b2_grad}
     # *** END CODE HERE ***
 
@@ -172,23 +171,13 @@ def backward_prop_regularized(data, one_hot_labels, params, forward_prop_func, r
             W1, W2, b1, and b2
     """
     # *** START CODE HERE ***
-    B = data.shape[0]
-    A, output, _ = forward_prop_func(data, one_hot_labels, params)
 
-    output_grad = output - one_hot_labels # softmax gradient, from derivation in part 1
-    
-    b2_grad = (1/B) * np.sum(output_grad, axis=0)
-    W2_grad = (1/B) * A.T @ output_grad + 2*reg*params['W2']
-    
-    A_grad = A * (1-A) # element wise multiplication, sigmoid derivative
-    hidden_grad = output_grad @ params['W2'].T * A_grad
-
-    b1_grad = (1/B) * np.sum(hidden_grad, axis=0)
-    W1_grad = (1/B) * data.T @ hidden_grad + 2*reg*params['W1']
-
-    # maybe have division by B here rather than in learning phase
-    return {'W1': W1_grad, 'W2': W2_grad, 'b1': b1_grad, 'b2': b2_grad}
+    backprop_grads = backward_prop(data, one_hot_labels, params, forward_prop_func)
+    backprop_grads['W1'] += 2*reg*params['W1'] # frob norm entry wise derivative
+    backprop_grads['W2'] += 2*reg*params['W2']
+    return backprop_grads
     # *** END CODE HERE ***
+
 
 def gradient_descent_epoch(train_data, one_hot_train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func):
     """
