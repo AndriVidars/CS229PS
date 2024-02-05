@@ -12,7 +12,7 @@ def main(train_path, save_path, reg = False):
     """
     x_train, y_train = util.load_csv(train_path, add_intercept=True)
     model = LogisticRegression()
-    losses, grads, thetas = model.fit(x_train, y_train, reg)
+    losses, thetas = model.fit(x_train, y_train, reg)
     preds = model.predict(x_train)
     np.savetxt(f'{save_path}.txt', preds)
     
@@ -24,15 +24,13 @@ def main(train_path, save_path, reg = False):
     plt.ylabel('loss')
     plt.savefig(f'{save_path}_loss.png')
 
-    print(f'Gradient for 10 last iterations')
-    for i in range(len(grads)-10, len(grads)):
-        print(list(grads[i]))
-    
-    print(f'thetas for 10 last iterations')
-    for i in range(len(thetas)-10, len(thetas)):
-        print(list(thetas[i]))
+    theta_norms = [np.linalg.norm(theta) for theta in thetas]
+    plt.figure()
+    plt.plot(theta_norms)
+    plt.xlabel('iter')
+    plt.ylabel('parameter magnitude')
+    plt.savefig(f'{save_path}_param_magnitude.png')
 
-    # gradient changes
     print(f'Norm of theta change for 10 last iterations')
     for i in range(len(thetas)-10, len(thetas)):
         print(np.linalg.norm(thetas[i-1] - thetas[i], ord = 1))
@@ -77,16 +75,12 @@ class LogisticRegression:
         n = x.shape[0]
         loss = (-1/n)*sum([(y[i]*np.log(self.sigmoid(x[i,:] @ self.theta) + e)) + ((1-y[i])*np.log(1-self.sigmoid(x[i,:] @ self.theta) + e)) for i in range(n)])
         if reg:
-            loss += 0.5* self.lbda * np.linalg.norm(self.theta, ord = 2)**2
+            loss += 0.5 * self.lbda * np.linalg.norm(self.theta, ord = 2)**2
         
         return loss
     
     def sigmoid(self, z):
         return 1/(1+np.exp(-z))
-
-    def sigmoid_diff(self, z):
-        g_z = self.sigmoid(z)
-        return g_z*(1-g_z)
 
     def fit(self, x, y, reg = False):
         """Run gradient descent to minimize J(theta) for logistic regression.
@@ -99,14 +93,11 @@ class LogisticRegression:
         self.theta = np.zeros(x.shape[1])
         n = x.shape[0]
         ls = [] # loss over iteations
-        grads = []
         thetas = []
         for i in range(self.max_iter):
             grad = (-1/n)*sum([(y[i]-self.sigmoid(x[i, :] @ self.theta))*x[i,:].T for i in range(n)])
             if reg:
                 grad += self.lbda*self.theta
-
-            grads.append(grad)
             
             old_theta = self.theta.copy()
             self.theta -= self.learning_rate * grad
@@ -116,7 +107,7 @@ class LogisticRegression:
             if np.linalg.norm(old_theta - self.theta, ord = 1) < self.eps:
                 break
         
-        return ls, grads, thetas
+        return ls, thetas
         # *** END CODE HERE ***
 
     def predict(self, x):

@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import random
 
 def softmax(x):
     """
@@ -21,9 +22,9 @@ def softmax(x):
         A 2d numpy float array containing the softmax results of shape batch_size x number_of_classes
     """
     # *** START CODE HERE ***
-    x -= np.max(x, axis=1) # subtract maximum value, row-wise to prevent overflow
+    x -= np.max(x, axis=1, keepdims=True) # subtract maximum value, row-wise to prevent overflow
     exp_x = np.exp(x)
-    exp_sum = np.sum(exp_x, axis=1)
+    exp_sum = np.sum(exp_x, axis=1, keepdims=True)
     return exp_x / exp_sum
     # *** END CODE HERE ***
 
@@ -130,19 +131,21 @@ def backward_prop(data, one_hot_labels, params, forward_prop_func):
             W1, W2, b1, and b2
     """
     # *** START CODE HERE ***
+    B = data.shape[0]
     A, output, _ = forward_prop_func(data, one_hot_labels, params)
 
     output_grad = output - one_hot_labels # softmax gradient, from derivation in part 1
     
-    b2_grad = np.sum(output_grad, axis=0)
-    W2_grad = A.T @ output_grad
+    b2_grad = (1/B) * np.sum(output_grad, axis=0)
+    W2_grad = (1/B) * A.T @ output_grad
     
     A_grad = A * (1-A) # element wise multiplication, sigmoid derivative
     hidden_grad = output_grad @ params['W2'].T * A_grad
 
-    b1_grad = np.sum(hidden_grad, axis=0)
-    W1_grad = data.T @ hidden_grad
+    b1_grad = (1/B) * np.sum(hidden_grad, axis=0)
+    W1_grad = (1/B) * data.T @ hidden_grad
 
+    # maybe have division by B here rather than in learning phase
     return {'W1': W1_grad, 'W2': W2_grad, 'b1': b1_grad, 'b2': b2_grad}
     # *** END CODE HERE ***
 
@@ -169,6 +172,22 @@ def backward_prop_regularized(data, one_hot_labels, params, forward_prop_func, r
             W1, W2, b1, and b2
     """
     # *** START CODE HERE ***
+    B = data.shape[0]
+    A, output, _ = forward_prop_func(data, one_hot_labels, params)
+
+    output_grad = output - one_hot_labels # softmax gradient, from derivation in part 1
+    
+    b2_grad = (1/B) * np.sum(output_grad, axis=0)
+    W2_grad = (1/B) * A.T @ output_grad + 2*reg*params['W2']
+    
+    A_grad = A * (1-A) # element wise multiplication, sigmoid derivative
+    hidden_grad = output_grad @ params['W2'].T * A_grad
+
+    b1_grad = (1/B) * np.sum(hidden_grad, axis=0)
+    W1_grad = (1/B) * data.T @ hidden_grad + 2*reg*params['W1']
+
+    # maybe have division by B here rather than in learning phase
+    return {'W1': W1_grad, 'W2': W2_grad, 'b1': b1_grad, 'b2': b2_grad}
     # *** END CODE HERE ***
 
 def gradient_descent_epoch(train_data, one_hot_train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func):
@@ -191,14 +210,14 @@ def gradient_descent_epoch(train_data, one_hot_train_labels, learning_rate, batc
     """
 
     # *** START CODE HERE ***
+    idx = list(range(train_data.shape[0])) # shuffle batches each epoch
+    random.shuffle(idx)
     for i in range(0, train_data.shape[0], batch_size):
-        # TODO: use random batches
-
-        data = train_data[i:i+batch_size, :]
-        one_hot_labels = one_hot_train_labels[i:i+batch_size]
+        data = train_data[idx[i:i+batch_size], :]
+        one_hot_labels = one_hot_train_labels[idx[i:i+batch_size]]
         grads = backward_prop_func(data, one_hot_labels, params, forward_prop_func)
         for p in params.keys():
-            params[p] -= (1/batch_size)*learning_rate*grads[p]
+            params[p] -= learning_rate*grads[p]
 
     # *** END CODE HERE ***
 
@@ -330,12 +349,11 @@ def main(plot=True):
     
     baseline_acc = run_train_test('baseline', all_data, all_labels, backward_prop, args.num_epochs, plot)
     
-    reg_acc = None
-    """
+    
     reg_acc = run_train_test('regularized', all_data, all_labels, 
         lambda a, b, c, d: backward_prop_regularized(a, b, c, d, reg=0.0001),
         args.num_epochs, plot)
-    """
+    
         
     return baseline_acc, reg_acc
 
