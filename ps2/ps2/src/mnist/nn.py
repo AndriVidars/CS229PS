@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import random
+import pickle
 
 def softmax(x):
     """
@@ -266,6 +267,11 @@ def run_train_test(name, all_data, all_labels, backward_prop_func, num_epochs, p
         get_initial_params, forward_prop, backward_prop_func,
         num_hidden=300, learning_rate=5, num_epochs=num_epochs, batch_size=1000
     )
+
+    # save weights to file
+    for p in params.keys():
+        with open(f'{p}_{name}.pkl', 'wb') as f:
+            pickle.dump(params[p], f)
 
     t = np.arange(num_epochs)
 
