@@ -2,7 +2,7 @@ import numpy as np
 import util
 import matplotlib.pylab as plt
 
-def main(train_path, save_path, reg = False):
+def main(train_path, save_path, reg = False, l_decay=False):
     """Problem: Logistic regression with gradient descent.
 
     Args:
@@ -12,7 +12,7 @@ def main(train_path, save_path, reg = False):
     """
     x_train, y_train = util.load_csv(train_path, add_intercept=True)
     model = LogisticRegression()
-    losses, thetas = model.fit(x_train, y_train, reg)
+    losses, thetas = model.fit(x_train, y_train, reg, l_decay)
     preds = model.predict(x_train)
     np.savetxt(f'{save_path}.txt', preds)
     
@@ -31,9 +31,7 @@ def main(train_path, save_path, reg = False):
     plt.ylabel('parameter magnitude')
     plt.savefig(f'{save_path}_param_magnitude.png')
 
-    print(f'Norm of theta change for 10 last iterations')
-    for i in range(len(thetas)-10, len(thetas)):
-        print(np.linalg.norm(thetas[i-1] - thetas[i], ord = 1))
+    print(thetas[-1])
 
     # *** START CODE HERE ***
     # Train a logistic regression classifier
@@ -82,7 +80,7 @@ class LogisticRegression:
     def sigmoid(self, z):
         return 1/(1+np.exp(-z))
 
-    def fit(self, x, y, reg = False):
+    def fit(self, x, y, reg = False, l_decay=False):
         """Run gradient descent to minimize J(theta) for logistic regression.
 
         Args:
@@ -100,7 +98,11 @@ class LogisticRegression:
                 grad += self.lbda*self.theta
             
             old_theta = self.theta.copy()
-            self.theta -= self.learning_rate * grad
+            if l_decay:
+                self.theta -= (1/(i+1)**2) * self.learning_rate * grad
+            else:
+                self.theta -= self.learning_rate * grad
+            
             thetas.append(self.theta.copy())
             
             ls.append(self.loss(x, y, reg))
@@ -124,7 +126,6 @@ class LogisticRegression:
         # *** END CODE HERE ***
 
 if __name__ == '__main__':
-    
     print('\n==== Training model on data set A ====')
     main(train_path='ds1_a.csv',
          save_path='logreg_pred_a')

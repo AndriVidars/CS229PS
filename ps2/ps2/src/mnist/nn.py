@@ -294,7 +294,7 @@ def run_train_test(name, all_data, all_labels, backward_prop_func, num_epochs, p
         ax2.set_ylabel('accuracy')
         ax2.legend()
 
-        fig.savefig('./' + name + '.pdf')
+        fig.savefig('./' + name + '.png')
 
     accuracy = nn_test(all_data['test'], all_labels['test'], params)
     print('For model %s, got accuracy: %f' % (name, accuracy))
