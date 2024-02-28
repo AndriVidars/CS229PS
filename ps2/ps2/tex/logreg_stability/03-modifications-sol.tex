@@ -1,2 +1,10 @@
 \begin{answer}
+\begin{enumerate}
+  \item As the data is linearly separable, changing the learning rate will only affect how long it takes the model to fit a line that separates the data, it doesn't prevent the model from growing overconfident, therefore the algorithm would not converge.
+  \item This will get the algorithm to converge in the sense that the change in norm of weights between iterations will be below the selected $\epsilon$ threshold, however that is only because the learning rate is decaying and not because the model is actually learning. 
+  \item After scaling the features, the data is still linearly separable, therefore the algorithm will still not converge 
+  \item This prevents the weights from growing and the model getting overconfident. Therefore the algorithm will converge.
+  \item Generally this will not work, it depends on the margin of separability. In the case where the data is just barely linearly separable, adding a zero mean Gaussian noise to the training data can make the data not linearly separable, making the algorithm converge. However that is not guaranteed.
+\end{enumerate}
+
 \end{answer}

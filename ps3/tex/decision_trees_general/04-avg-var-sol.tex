@@ -1,2 +1,10 @@
-\begin{answer}{
+\begin{answer}
+\newpage
+\begin{enumerate}
+	\item[(i)] For regression, we would return the average of the response variable for the items in the leaf nodes. Therefore we would change line 3 to\\ \textbf{return} Leaf(average($y$) in $Data$)
+ \item[(ii)] For regression task, we minimize mean squared error. Since our predictions are based on the averages of leaf nodes, $\bar{y}$, we are minimizing, $\frac{\sum_{i=1}^{n} (y_i-\bar{y})^2}{n}$, that is, we minimize the variance. Therefore, we change line 7 in the code to\\
+ $Variance_{i, v}$ = Weighted(Variance($Data_1.y$) + Variance($Data_2.y$))\\
+ and correspondingly we change line 11 to \\
+ $h^*, v^*$ = choose feature $h_i$ and split $v$ that has smallest $Variance_{i, v}$
+\end{enumerate}
 \end{answer}

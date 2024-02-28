@@ -22,7 +22,6 @@ class DecisionTree:
         return [self._predict(inputs) for inputs in X]
         
     def _misclassification_loss(self, y):
-        # TODO: Implement the misclassification loss function.
         loss = None
         # *** START CODE HERE ***
         if y.shape[0] == 0:
@@ -47,22 +46,23 @@ class DecisionTree:
         if parent_loss == 0:
             return best_idx, best_thr
 
-        max_gain_split = 0
+        min_loss = float('inf')
         for i in range(self.n_features_):
             # find threshold
-            for thr in [X[j][i] for j in range(X.shape[0])]:
+            features_sorted = sorted([X[j][i] for j in range(X.shape[0])])
+            thr_vals = [(features_sorted[i] + features_sorted[i+1])/2 for i in range(X.shape[0] - 1)]
+            for thr in thr_vals:
                 y_right = y[X[:, i] >= thr]
                 y_left = y[X[:, i] < thr]
-                gain_split = parent_loss - ((y_left.shape[0]/y.shape[0]) * self._misclassification_loss(y_left) +
+                split_loss = ((y_left.shape[0]/y.shape[0]) * self._misclassification_loss(y_left) +
                                              (y_right.shape[0]/y.shape[0]) * self._misclassification_loss(y_right))
                 
-                if gain_split > max_gain_split:
-                    max_gain_split = gain_split
+                if split_loss < min_loss:
+                    min_loss = split_loss
                     best_idx, best_thr = i, thr
     
         # *** END YOUR CODE ***
         # Return the best split with the feature index and threshold.
-
         return best_idx, best_thr
         
     def _grow_tree(self, X, y, depth=0):

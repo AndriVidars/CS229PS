@@ -1,2 +1,13 @@
-\begin{answer}{
+\begin{answer}
+\newpage
+Advantages:
+\begin{itemize}
+    \item Can create more complex decision boundaries by making linear combinations of input features, and therefore take advantage of interactions of features.
+    \item As a result of the previous point. If the outcome class is dependent dependant on interactions of features, then a multivariate tree is less complex, in terms of number of nodes, than a single variate tree. 
+\end{itemize}
+Disadvantages:
+\begin{itemize}
+    \item This introduces a new overfitting risk. In mutivariate decision trees, we are, in essence running logistic regression to determine the split at each node. If the logistic regression learner is not properly regularized, there is a risk of overfitting(creating overconfident models)
+    \item Computational cost. Fitting a logistic regression model is more costly than finding the optimal split in a single variate decision tree. Unless the final multivariate tree is much shorter than the final single variate tree, the computational cost of fitting the multivariate tree is much higher.
+\end{itemize}
 \end{answer}

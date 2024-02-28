@@ -117,10 +117,6 @@ if __name__ == "__main__":
     step_predict = lambda data: compute_predictions(data, step_weights, step_fn=True)
     step_y_pred = step_predict(x)
     print('Step function accuracy is: ' + str(np.mean(step_y_pred == y)))
-    util.plot(x, y, step_predict, save_path='step_weights.pdf')
+    util.plot(x, y, step_predict, save_path='step_weights.png')
+    
 
-    linear_weights = optimal_linear_weights()
-    linear_predict = lambda data: compute_predictions(data, linear_weights, step_fn=False)
-    linear_y_pred = linear_predict(x)
-    print('Linear function accuracy is: ' + str(np.mean(linear_y_pred == y)))
-    util.plot(x, y, linear_predict, save_path='linear_weights.pdf')
