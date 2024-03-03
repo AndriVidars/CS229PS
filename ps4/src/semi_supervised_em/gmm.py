@@ -23,15 +23,26 @@ def main(is_semi_supervised, trial_num):
     z_tilde = z_all[labeled_idxs, :]   # Corresponding labels
     x = x_all[~labeled_idxs, :]        # Unlabeled examples
 
+    n = x.shape[0]
+
     # *** START CODE HERE ***
     # (1) Initialize mu and sigma by splitting the n_examples data points uniformly at random
     # into K groups, then calculating the sample mean and covariance for each group
+    
+    indices = np.arange(x.shape[0])
+    np.random.shuffle(indices) 
+    x_shuffled = x[indices]
+    x_split = np.array_split(x_shuffled, K, axis=0)
+    mu = [np.mean(x_, axis = 0) for x_ in x_split]
+    sigma = [np.cov(x_.T) for x_ in x_split]
 
     # (2) Initialize phi to place equal probability on each Gaussian
     # phi should be a numpy array of shape (K,)
+    phi = np.full(K, 1/K)
 
     # (3) Initialize the w values to place equal probability on each Gaussian
     # w should be a numpy array of shape (m, K)
+    w = np.full((n, K), 1/K)
     # *** END CODE HERE ***
 
     if is_semi_supervised:
@@ -49,6 +60,7 @@ def main(is_semi_supervised, trial_num):
 
 
 def run_em(x, w, phi, mu, sigma):
+
     """Problem 3(d): EM Algorithm (unsupervised).
 
     See inline comments for instructions.
@@ -68,25 +80,89 @@ def run_em(x, w, phi, mu, sigma):
     # No need to change any of these parameters
     eps = 1e-3  # Convergence threshold
     max_iter = 1000
+    
+    n = x.shape[0]
+    d = x.shape[1]
+    k = w.shape[1]
 
     # Stop when the absolute change in log-likelihood is < eps
     # See below for explanation of the convergence criterion
     it = 0
     ll = prev_ll = None
     while it < max_iter and (prev_ll is None or np.abs(ll - prev_ll) >= eps):
-        pass  # Just a placeholder for the starter code
         # *** START CODE HERE
+        
         # (1) E-step: Update your estimates in w
+        for i in range(n):
+            # maybe x[i, :] needs to be transpose to match up with mu ?
+            terms = [(np.linalg.det(sigma[j])**(-0.5))*np.exp(-0.5*(x[i, :] - mu[j]).T @ np.linalg.inv(sigma[j]) @ (x[i, :] - mu[j])) * phi[j] for j in range(k)]
+            denom = sum(terms)
+            
+            for j in range(k):
+                w[i, j] = terms[j] / denom
 
         # (2) M-step: Update the model parameters phi, mu, and sigma
+        
+        # update mus, should we calculate all grads with prev data and then, yes prob
+        mu_new = [np.zeros(d) for _ in range(k)]
+        phi_new = np.zeros(k)
+        sigma_new = [np.zeros((d, d)) for _ in range(k)]
+        
+        for j in range(k):
+            mu_new[j] = sum([w[i, j] * x[i, :] for i in range(n)]) / sum([w[i, j] for i in range(n)])
+            
+            phi_new[j] = (1/n) * sum([w[i, j] for i in range(n)])
+
+            sigma_new[j] = sum([w[i, j] * np.outer(x[i, :] - mu[j], x[i, :] - mu[j]) for i in range(n)]) / sum([w[i, j] for i in range(n)])
+
 
         # (3) Compute the log-likelihood of the data to check for convergence.
         # By log-likelihood, we mean `ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
         # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
-        # *** END CODE HERE ***
+            
+        prev_ll = ll_unsup(x, phi, mu, sigma)
+        ll = ll_unsup(x, phi_new, mu_new, sigma_new)
 
+        assert(prev_ll < ll)
+
+        mu, phi, sigma = mu_new, phi_new, sigma_new
+
+        it += 1
+
+
+        # *** END CODE HERE ***
+    print(it)
     return w
+
+def ll_unsup(x, phi, mu, sigma):
+    out = 0
+    n, d = x.shape
+    k = len(mu)
+    for i in range(n):
+        out += np.log(sum([(1/((2*np.pi)**(d/2)*np.linalg.det(sigma[j])**(0.5)))*
+                           np.exp(-0.5*(x[i, :] - mu[j]).T @ np.linalg.inv(sigma[j]) @ (x[i, :] - mu[j])) * phi[j] for j in range(k)]))
+    
+    
+    return out
+
+def ll_semisup(x, x_tilde, phi, mu, sigma, alpha):
+    out = 0
+    n, d = x.shape
+    n_tilde = x_tilde.shape[0]
+    k = len(mu)
+    for i in range(n):
+        out += np.log(sum([(1/((2*np.pi)**(d/2)*np.linalg.det(sigma[j])**(0.5)))*
+                           np.exp(-0.5*(x[i, :] - mu[j]).T @ np.linalg.inv(sigma[j]) @ (x[i, :] - mu[j])) * phi[j] for j in range(k)]))
+
+    for i in range(n_tilde):
+        out += alpha * np.log(sum([(1/((2*np.pi)**(d/2)*np.linalg.det(sigma[j])**(0.5)))*
+                           np.exp(-0.5*(x_tilde[i, :] - mu[j]).T @ np.linalg.inv(sigma[j]) @ (x_tilde[i, :] - mu[j])) * phi[j] for j in range(k)]))
+    
+    
+    return out
+
+
 
 
 def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma):
@@ -113,22 +189,59 @@ def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma):
     eps = 1e-3   # Convergence threshold
     max_iter = 1000
 
+    n = x.shape[0]
+    n_tilde = x_tilde.shape[0]
+    d = x.shape[1]
+    k = w.shape[1]
+
     # Stop when the absolute change in log-likelihood is < eps
     # See below for explanation of the convergence criterion
     it = 0
     ll = prev_ll = None
     while it < max_iter and (prev_ll is None or np.abs(ll - prev_ll) >= eps):
         pass  # Just a placeholder for the starter code
-        # *** START CODE HERE ***
         # (1) E-step: Update your estimates in w
+        for i in range(n):
+            # maybe x[i, :] needs to be transpose to match up with mu ?
+            terms = [(np.linalg.det(sigma[j])**(-0.5))*np.exp(-0.5*(x[i, :] - mu[j]).T @ np.linalg.inv(sigma[j]) @ (x[i, :] - mu[j])) * phi[j] for j in range(k)]
+            denom = sum(terms)
+            
+            for j in range(k):
+                w[i, j] = terms[j] / denom
 
         # (2) M-step: Update the model parameters phi, mu, and sigma
+        
+        # update mus, should we calculate all grads with prev data and then, yes prob
+        mu_new = [np.zeros(d) for _ in range(k)]
+        phi_new = np.zeros(k)
+        sigma_new = [np.zeros((d, d)) for _ in range(k)]
+        
+        for j in range(k):
+            mu_new[j] = (sum([w[i, j] * x[i, :] for i in range(n)]) + sum([alpha* x_tilde[i, :] for i in range(n_tilde) if z_tilde[i] == j])) \
+                  / (sum([w[i, j] for i in range(n)]) + sum([alpha for i in range(n_tilde) if z_tilde[i] == j]))
+            
+            phi_new[j] = (sum([w[i, j] for i in range(n)]) + sum([alpha for i in range(n_tilde) if z_tilde[i] == j])) / (n + alpha*n_tilde)
+
+            sigma_new[j] = (sum([w[i, j] * np.outer(x[i, :] - mu[j], x[i, :] - mu[j]) for i in range(n)])\
+                             + sum([alpha * np.outer(x_tilde[i, :] - mu[j], x_tilde[i, :] - mu[j]) for i in range(n_tilde) if z_tilde[i] == j]))\
+                  / (sum([w[i, j] for i in range(n)]) + sum([alpha for i in range(n_tilde) if z_tilde[i] == j]))
+
 
         # (3) Compute the log-likelihood of the data to check for convergence.
-        # Hint: Make sure to include alpha in your calculation of ll.
+        # By log-likelihood, we mean `ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
+        # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
-        # *** END CODE HERE ***
+            
+        prev_ll = ll_semisup(x, x_tilde, phi, mu, sigma, alpha)
+        ll = ll_semisup(x, x_tilde, phi_new, mu_new, sigma_new, alpha)
 
+        assert( prev_ll < ll)
+
+        mu, phi, sigma = mu_new, phi_new, sigma_new
+
+        it += 1
+
+    print(it)
     return w
 
 
@@ -186,17 +299,17 @@ def load_gmm_dataset(csv_path):
 
 
 if __name__ == '__main__':
-    np.random.seed(229)
     # Run NUM_TRIALS trials to see how different initializations
     # affect the final predictions with and without supervision
     for t in range(NUM_TRIALS):
-        main(is_semi_supervised=False, trial_num=t)
+        #main(is_semi_supervised=False, trial_num=t)
+        
 
         # *** START CODE HERE ***
         # Once you've implemented the semi-supervised version,
         # uncomment the following line.
         # You do not need to add any other lines in this code block.
 
-        # main(is_semi_supervised=True, trial_num=t)
+        main(is_semi_supervised=True, trial_num=t)
 
         # *** END CODE HERE ***
